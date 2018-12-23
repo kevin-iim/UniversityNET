@@ -1,5 +1,4 @@
-# UniversityNET(中山大学南方学院)
-
+# UniversityNET
 
 
 前言
