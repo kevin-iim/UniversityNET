@@ -20,6 +20,7 @@
     echo "${BTP} vth10 lan down" >> /mnt/net.log
     ifconfig vth10 down
     ifconfig vth10 up
+    sleep 1m
     fi
     done
 }&
@@ -48,6 +49,7 @@
     echo "${BTP} vth11 lan down" >> /mnt/net.log
     ifconfig vth11 down
     ifconfig vth11 up
+    sleep 1m
     fi
     done
 }&
