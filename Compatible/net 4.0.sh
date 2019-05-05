@@ -20,29 +20,28 @@ then
 }
 else
 {
-    echo "check pass"
+    #检测日志文件是否正常
+    echo -e "\n" >> ${filepath}/WanError.log
+    echo -e "\n" >> ${filepath}/LanError.log
+    echo -e "\n" >> ${filepath}/dropping.log
+    until [ `sed -n '$=' ${filepath}/dropping.log` -eq ${quantity[1]} ]
+    do
+    {
+        if [ `sed -n '$=' ${filepath}/dropping.log` -lt ${quantity[1]} ]
+        then
+        {
+            echo -e "\n" >> ${filepath}/dropping.log
+        }
+        else
+        {
+            sed -i '$d' ${filepath}/dropping.log
+        }
+        fi
+    }
+    done
 }
 fi
-###########################################################################################
-#检测日志文件是否正常
-echo -e "\n" >> ${filepath}/WanError.log
-echo -e "\n" >> ${filepath}/LanError.log
-echo -e "\n" >> ${filepath}/dropping.log
-until [ `sed -n '$=' ${filepath}/dropping.log` -eq ${quantity[1]} ]
-do
-{
-    if [ `sed -n '$=' ${filepath}/dropping.log` -lt ${quantity[1]} ]
-    then
-    {
-        echo -e "\n" >> ${filepath}/dropping.log
-    }
-    else
-    {
-        sed -i '$d' ${filepath}/dropping.log
-    }
-    fi
-}
-done
+
 ###########################################################################################
 #创建虚拟网卡
 until [ ! ${count} -lt `expr ${count} + 1` ]
