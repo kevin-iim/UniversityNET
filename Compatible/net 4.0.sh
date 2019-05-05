@@ -41,7 +41,7 @@ else
     done
 
     #创建虚拟网卡
-    until [ ! ${count} -lt `expr ${count} + 1` ]
+    until [ ! ${count} -lt ${quantity[0]} ]
     do
     {
         ip link add link ${Eth[${count}]} name ${Vth[${count}]} type macvlan
@@ -51,7 +51,7 @@ else
     done
 }
 fi
-
+count=0
 {
     while true
     do
@@ -102,7 +102,7 @@ fi
             BTP=$(date)
             drop[${count}]=`expr ${drop[${count}]} + 1`
             sed -i "`expr ${count} + 1`c${drop[${count}]} ${BTP}" ${filepath}/dropping.log
-            sed -i "`expr ${count} + 2`c${drop[*]}" ${filepath}/dropping.log
+            sed -i "`expr ${quantity[0]} + 1`c${drop[*]}" ${filepath}/dropping.log
             ping -I ${Vth[${count}]} -c 2 221.5.88.88
             if [ $? -eq 1 ];
             then
@@ -143,4 +143,14 @@ fi
         sed -i "1i${BTP} ${Account[${count}]} ${Vth[${count}]}" ${filepath}/LanError.log
     }
     fi
+
+    count=`expr ${count} + 1`
+    if [ "${count}" -eq ${quantity[0]} ];
+    then
+    {
+        count=0
+    }
+    fi
+
+    done
 }
