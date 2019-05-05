@@ -8,11 +8,7 @@ routerip=10.192.168.225
 filepath=/mnt/bash
 ###########################################################################################
 #检测设置是否出现错误
-quantity[0]=${#Eth[*]}
-quantity[1]=${#Vth[*]}
-quantity[2]=${#Account{*}}
-quantity[3]=${#Password{*}}
-if [ ${quantity[0]} -ne ${quantity[1]} -o ${quantity[1]} -ne ${quantity[2]} -o ${quantity[2]} -ne ${quantity[3]} ]
+if [ ${#Account{*}} -ne ${#Vth[*]} -o ${#Vth[*]} -ne ${#Account{*}} -o ${#Account{*}} -ne ${#Password{*}} ]
 then
 {
     echo "check not pass"
@@ -20,14 +16,15 @@ then
 }
 else
 {
+    Quantity=${#Account{*}}
     #检测日志文件是否正常
     echo -e "\n" >> ${filepath}/WanError.log
     echo -e "\n" >> ${filepath}/LanError.log
     echo -e "\n" >> ${filepath}/dropping.log
-    until [ `sed -n '$=' ${filepath}/dropping.log` -eq ${quantity[1]} ]
+    until [ `sed -n '$=' ${filepath}/dropping.log` -eq $Quantity ]
     do
     {
-        if [ `sed -n '$=' ${filepath}/dropping.log` -lt ${quantity[1]} ]
+        if [ `sed -n '$=' ${filepath}/dropping.log` -lt $Quantity ]
         then
         {
             echo -e "\n" >> ${filepath}/dropping.log
@@ -41,7 +38,7 @@ else
     done
 
     #创建虚拟网卡
-    until [ ! ${count} -lt ${quantity[0]} ]
+    until [ ! ${count} -lt $Quantity ]
     do
     {
         ip link add link ${Eth[${count}]} name ${Vth[${count}]} type macvlan
@@ -67,7 +64,7 @@ count=0
             BTP=$(date)
             drop[${count}]=`expr ${drop[${count}]} + 1`
             sed -i "`expr ${count} + 1`c${drop[${count}]} ${BTP}" ${filepath}/dropping.log
-            sed -i "`expr ${count} + 2`c${drop[*]}" ${filepath}/dropping.log
+            sed -i "`expr $Quantity + 1`c${drop[*]}" ${filepath}/dropping.log
             ping -I ${Vth[${count}]} -c 2 183.6.147.29
             if [ $? -eq 1 ];
             then
@@ -92,7 +89,7 @@ count=0
         }
         fi
     }
-    elif [[ $userip =~ "10.51." ]]
+    elif [[ $userip =~ "10.51." -o $userip =~ "10.52." -o $userip =~ "10.53." ]]
     {
         #unicom
         ping -I ${Vth[${count}]} -c 1 221.5.88.88
@@ -102,7 +99,7 @@ count=0
             BTP=$(date)
             drop[${count}]=`expr ${drop[${count}]} + 1`
             sed -i "`expr ${count} + 1`c${drop[${count}]} ${BTP}" ${filepath}/dropping.log
-            sed -i "`expr ${quantity[0]} + 1`c${drop[*]}" ${filepath}/dropping.log
+            sed -i "`expr $Quantity + 1`c${drop[*]}" ${filepath}/dropping.log
             ping -I ${Vth[${count}]} -c 2 221.5.88.88
             if [ $? -eq 1 ];
             then
@@ -145,7 +142,7 @@ count=0
     fi
 
     count=`expr ${count} + 1`
-    if [ "${count}" -eq ${quantity[0]} ];
+    if [ "${count}" -eq $Quantity ];
     then
     {
         count=0
