@@ -166,8 +166,17 @@ count=0
     if [ $(date +%M) == 00 ];
     then
     {
-        unset drop
         sed -i "1c${dropAll[*]}" ${logpath}/dropping.log
+        count=0
+        until [ ! ${count} -lt $Quantity ]
+        do
+        {
+            drop[${count}]=0
+            dropAll[${count}]=0
+            count=`expr ${count} + 1`
+        }
+        done
+        count=0
     }
     else
     {
