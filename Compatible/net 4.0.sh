@@ -4,11 +4,10 @@ Vth=()
 Account=()
 Password=()
 count=0
-routerip=
-filepath=
+logpath=/mnt/log
 ###########################################################################################
 #检测设置是否出现错误
-if [ ${#Account{*}} -ne ${#Vth[*]} -o ${#Vth[*]} -ne ${#Account{*}} -o ${#Account{*}} -ne ${#Password{*}} ]
+if [ ${#Account[*]} -ne ${#Vth[*]} -o ${#Vth[*]} -ne ${#Account[*]} -o ${#Account[*]} -ne ${#Password[*]} ]
 then
 {
     echo "check not pass"
@@ -16,33 +15,35 @@ then
 }
 else
 {
-    Quantity=${#Account{*}}
+    Quantity=${#Account[*]}
     #检测日志文件是否正常
-    echo -e "\n" >> ${filepath}/WanError.log
-    echo -e "\n" >> ${filepath}/LanError.log
-    echo -e "\n" >> ${filepath}/dropping.log
-    until [ `sed -n '$=' ${filepath}/dropping.log` -eq $Quantity ]
+    echo -e "\n" >> ${logpath}/WanError.log
+    echo -e "\n" >> ${logpath}/LanError.log
+    echo -e "\n" >> ${logpath}/dropping.log
+    until [ `sed -n '$=' ${logpath}/dropping.log` -eq 25 ]
     do
     {
-        if [ `sed -n '$=' ${filepath}/dropping.log` -lt $Quantity ]
+        if [ `sed -n '$=' ${logpath}/dropping.log` -lt 25 ]
         then
         {
-            echo -e "\n" >> ${filepath}/dropping.log
+            echo -e "\n" >> ${logpath}/dropping.log
         }
         else
         {
-            sed -i '$d' ${filepath}/dropping.log
+            sed -i '$d' ${logpath}/dropping.log
         }
         fi
     }
     done
 
-    #创建虚拟网卡
+    #创建虚拟网卡||创建drop组
     until [ ! ${count} -lt $Quantity ]
     do
     {
         ip link add link ${Eth[${count}]} name ${Vth[${count}]} type macvlan
         ifconfig ${Vth[${count}]} up
+        drop[${count}]=0
+        dropAll[${count}]=0
         count=`expr ${count} + 1`
     }
     done
@@ -52,8 +53,8 @@ count=0
 {
     while true
     do
-    ping -I ${Vth[${count}]} -c 1 172.16.30.33
-    if [ $? -eq 1 ];
+    userip=$(ifconfig ${Vth[${count}]}|grep inet|grep -v 127.0.0.1|grep -v inet6|awk '{print $2}'|tr -d "addr:")
+    if [[ $userip =~ "10.12" || $userip =~ "10.13" ]]
     then
     {
         #telecom
@@ -63,8 +64,7 @@ count=0
         {
             BTP=$(date)
             drop[${count}]=`expr ${drop[${count}]} + 1`
-            sed -i "`expr ${count} + 1`c${drop[${count}]} ${BTP}" ${filepath}/dropping.log
-            sed -i "25c${drop[*]}" ${filepath}/dropping.log
+            dropAll[${count}]=`expr ${dropAll[${count}]} + 1`
             ping -I ${Vth[${count}]} -c 2 183.6.147.29
             if [ $? -eq 1 ];
             then
@@ -73,16 +73,15 @@ count=0
                 if [ $? -eq 0 ];
                 then
                 {
-                    userip=$(ifconfig -a|grep inet|grep -v 127.0.0.1|grep -v inet6|awk '{print $2}'|tr -d "addr:"|grep -v ${routerip}|grep -v 10.172.16.178|sed -n "`expr ${count} + 1`p")
                     curl --interface ${Vth[${count}]} -s -d "userid=${Account[${count}]}@NFSYSU.GZ&passwd=${Password[${count}]}&wlanuserip=${userip}&wlanacname=nfsysugz2&auth_type=PAP&wlanacIp=183.6.109.10" --user-agent "Supplicant" "http://219.136.125.139/portalAuthAction.do"
-                    if [ `sed -n '$=' ${filepath}/WanError.log` 100 ]
+                    if [ `sed -n '$=' ${logpath}/WanError.log` 100 ]
                     then
                     {
-                        sed -i '$d' ${filepath}/WanError.log
+                        sed -i '$d' ${logpath}/WanError.log
                     }
                     fi
                     BTP=$(date)
-                    sed -i "1i${BTP} ${Account[${count}]} ${Vth[${count}]}" ${filepath}/WanError.log
+                    sed -i "1i${BTP} ${Account[${count}]} ${Vth[${count}]}" ${logpath}/WanError.log
                 }
                 fi
             }
@@ -93,18 +92,19 @@ count=0
             #dhcp bug
             ifconfig ${Vth[${count}]} down
             ifconfig ${Vth[${count}]} up
-            if [ `sed -n '$=' ${filepath}/LanError.log` -eq 100 ]
+            if [ `sed -n '$=' ${logpath}/LanError.log` -eq 100 ]
             then
             {
-                sed -i '$d' ${filepath}/LanError.log
+                sed -i '$d' ${logpath}/LanError.log
             }
             fi
             BTP=$(date)
-            sed -i "1i${BTP} ${Account[${count}]} ${Vth[${count}]}" ${filepath}/LanError.log
+            sed -i "1i${BTP} ${Account[${count}]} ${Vth[${count}]}" ${logpath}/LanError.log
         }
         fi
     }
-    else
+    elif [[ $userip =~ "10.51" || $userip =~ "10.52" || $userip =~ "10.53" ]];
+    then
     {
         #unicom
         ping -I ${Vth[${count}]} -c 1 221.5.88.88
@@ -113,9 +113,7 @@ count=0
         {
             BTP=$(date)
             drop[${count}]=`expr ${drop[${count}]} + 1`
-            #tag
-            sed -i "`expr ${count} + 1`c${drop[${count}]} ${BTP}" ${filepath}/dropping.log
-            sed -i "`expr $Quantity + 1`c${drop[*]}" ${filepath}/dropping.log
+            dropAll[${count}]=`expr ${dropAll[${count}]} + 1`
             ping -I ${Vth[${count}]} -c 2 221.5.88.88
             if [ $? -eq 1 ];
             then
@@ -126,20 +124,34 @@ count=0
                 {
                     CTP=$(date +%s000)
                     curl --interface ${Vth[${count}]} "http://172.16.30.33/drcom/login?callback=dr${CTP}&DDDDD=${Account[${count}]}&upass=${Password[${count}]}&0MKKey=123456&R1=0&R3=1&R6=0&para=00&v6ip=&_=${CTP}"
-                    if [ `sed -n '$=' ${filepath}/WanError.log` -eq 100 ]
+                    if [ `sed -n '$=' ${logpath}/WanError.log` -eq 100 ]
                     then
                     {
-                        sed -i '$d' ${filepath}/WanError.log
+                        sed -i '$d' ${logpath}/WanError.log
                     }
                     fi
                     BTP=$(date)
-                    sed -i "1i${BTP} ${Account[${count}]} ${Vth[${count}]}" ${filepath}/WanError.log
+                    sed -i "1i${BTP} ${Account[${count}]} ${Vth[${count}]}" ${logpath}/WanError.log
                 }
                 fi
             }
             fi
         }
         fi
+    }
+    else
+    {
+        #dhcp bug
+        ifconfig ${Vth[${count}]} down
+        ifconfig ${Vth[${count}]} up
+        if [ `sed -n '$=' ${logpath}/LanError.log` -eq 100 ]
+        then
+        {
+            sed -i '$d' ${logpath}/LanError.log
+        }
+        fi
+        BTP=$(date)
+        sed -i "1i${BTP} ${Account[${count}]} ${Vth[${count}]}" ${logpath}/LanError.log
     }
     fi
 
@@ -148,6 +160,18 @@ count=0
     then
     {
         count=0
+    }
+    fi
+
+    if [ $(date +%M) == 00 ];
+    then
+    {
+        unset drop
+        sed -i "1c${dropAll[*]}" ${logpath}/dropping.log
+    }
+    else
+    {
+        sed -i "`expr $(date +%H) + 2`c${drop[*]}" ${logpath}/dropping.log
     }
     fi
 
