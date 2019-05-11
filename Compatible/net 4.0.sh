@@ -36,14 +36,14 @@ else
     }
     done
 
-    #创建虚拟网卡||创建drop组
+    #创建虚拟网卡||创建drop组||创建等待列表
     until [ ! ${count} -lt $Quantity ]
     do
     {
         ip link add link ${Eth[${count}]} name ${Vth[${count}]} type macvlan
         ifconfig ${Vth[${count}]} up
         drop[${count}]=0
-        dropAll[${count}]=0
+        droplist[${count}]=wired
         count=`expr ${count} + 1`
     }
     done
@@ -54,7 +54,7 @@ count=0
     while true
     do
     userip=$(ifconfig ${Vth[${count}]}|grep inet|grep -v 127.0.0.1|grep -v inet6|awk '{print $2}'|tr -d "addr:")
-    if [[ $userip =~ "10.12" || $userip =~ "10.13" ]]
+    if [[ $userip =~ "10.12." || $userip =~ "10.13." ]]
     then
     {
         #telecom
@@ -64,7 +64,6 @@ count=0
         {
             BTP=$(date)
             drop[${count}]=`expr ${drop[${count}]} + 1`
-            dropAll[${count}]=`expr ${dropAll[${count}]} + 1`
             ping -I ${Vth[${count}]} -c 2 183.6.147.29
             if [ $? -eq 1 ];
             then
@@ -103,17 +102,16 @@ count=0
         }
         fi
     }
-    elif [[ $userip =~ "10.51" || $userip =~ "10.52" || $userip =~ "10.53" ]];
+    elif [[ $userip =~ "10.51."  || $userip =~ "10.53." ]];
     then
     {
-        #unicom
+        #unicom wired
         ping -I ${Vth[${count}]} -c 1 221.5.88.88
         if [ $? -eq 1 ];
         then
         {
             BTP=$(date)
             drop[${count}]=`expr ${drop[${count}]} + 1`
-            dropAll[${count}]=`expr ${dropAll[${count}]} + 1`
             ping -I ${Vth[${count}]} -c 2 221.5.88.88
             if [ $? -eq 1 ];
             then
@@ -136,6 +134,85 @@ count=0
                 fi
             }
             fi
+        }
+        fi
+    }
+    elif [[ $userip =~ "10.52." ]];
+    then
+    {
+        #unicom wireless
+        if [ ${droplist[$count]} == wired ];
+        then
+        {
+            droplist[$count]=fine
+            ping -I ${Vth[${count}]} -c 3 221.5.88.88
+            if [ $? -eq 1 ];
+            then
+            {
+                CTP=$(date +%s000)
+                curl --interface ${Vth[${count}]} "http://172.16.30.33/drcom/login?callback=dr${CTP}&DDDDD=${Account[${count}]}&upass=${Password[${count}]}&0MKKey=123456&R1=0&R3=1&R6=1&para=00&v6ip=&_=${CTP}"
+            }
+            fi
+        }
+        elif [ ${droplist[$count]} == fine ];
+        then
+        {
+            ping -I ${Vth[${count}]} -c 1 221.5.88.88
+            if [ $? -eq 1 ];
+            then
+            {
+                BTP=$(date)
+                drop[${count}]=`expr ${drop[${count}]} + 1`
+                ping -I ${Vth[${count}]} -c 2 221.5.88.88
+                if [ $? -eq 1 ];
+                then
+                {
+                    droplist[$count]=`expr $(date +%M) - 1`
+                    if [ ${droplist[$count]} -eq -1 ]
+                    then
+                    {
+                        droplist[$count]=59
+                    }
+                    fi
+                    CTP=$(date +%s000)
+                    curl --interface ${Vth[${count}]} "http://172.16.30.33/drcom/login?callback=dr${CTP}&DDDDD=${Account[${count}]}&upass=${Password[${count}]}&0MKKey=123456&R1=0&R3=1&R6=1&para=00&v6ip=&_=${CTP}"
+                    if [ `sed -n '$=' ${logpath}/WanError.log` -eq 100 ]
+                    then
+                    {
+                        sed -i '$d' ${logpath}/WanError.log
+                    }
+                    fi
+                    BTP=$(date)
+                    sed -i "1i${BTP} ${Account[${count}]} ${Vth[${count}]}" ${logpath}/WanError.log
+                }
+                fi
+            }
+            fi
+        }
+        elif [ ${droplist[$count]} == $(date +%M) ]
+        then
+        {
+            ping -I ${Vth[${count}]} -c 1 221.5.88.88
+            if [ $? -eq 1 ];
+            then
+            {
+                BTP=$(date)
+                drop[${count}]=`expr ${drop[${count}]} + 1`
+                ping -I ${Vth[${count}]} -c 2 221.5.88.88
+                if [ $? -eq 1 ];
+                then
+                {
+                    CTP=$(date +%s000)
+                    curl --interface ${Vth[${count}]} "http://172.16.30.33/drcom/login?callback=dr${CTP}&DDDDD=${Account[${count}]}&upass=${Password[${count}]}&0MKKey=123456&R1=0&R3=1&R6=1&para=00&v6ip=&_=${CTP}"
+                    droplist[$count]=fine
+                }
+                fi
+            }
+            fi
+        }
+        else
+        {
+            sed -i "1c${droplist[*]}" ${logpath}/dropping.log
         }
         fi
     }
@@ -166,13 +243,11 @@ count=0
     if [ $(date +%M) == 00 ];
     then
     {
-        sed -i "1c${dropAll[*]}" ${logpath}/dropping.log
         count=0
         until [ ! ${count} -lt $Quantity ]
         do
         {
             drop[${count}]=0
-            dropAll[${count}]=0
             count=`expr ${count} + 1`
         }
         done
