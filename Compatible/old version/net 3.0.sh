@@ -16,6 +16,7 @@ then
 else
 {
     Quantity=${#Account[*]}
+    drop[${Quantity}]=0
     #检测日志文件是否正常
     echo -e "\n" >> ${logpath}/WanError.log
     echo -e "\n" >> ${logpath}/LanError.log
@@ -53,6 +54,7 @@ count=0
 {
     while true
     do
+    drop[${Quantity}]=`expr ${drop[${Quantity}]} + 1`
     userip=$(ifconfig ${Vth[${count}]}|grep inet|grep -v 127.0.0.1|grep -v inet6|awk '{print $2}'|tr -d "addr:")
     if [[ $userip =~ "10.12." || $userip =~ "10.13." ]]
     then
@@ -68,7 +70,7 @@ count=0
             if [ $? -eq 1 ];
             then
             {
-                ping -I ${Vth[${count}]} -c 1 202.96.128.86
+                ping -I ${Vth[${count}]} -c 1 202.96.128.166
                 if [ $? -eq 0 ];
                 then
                 {
@@ -85,20 +87,6 @@ count=0
                 fi
             }
             fi
-        }
-        else
-        {
-            #dhcp bug
-            ifconfig ${Vth[${count}]} down
-            ifconfig ${Vth[${count}]} up
-            if [ `sed -n '$=' ${logpath}/LanError.log` -eq 100 ]
-            then
-            {
-                sed -i '$d' ${logpath}/LanError.log
-            }
-            fi
-            BTP=$(date)
-            sed -i "1i${BTP} ${Account[${count}]} ${Vth[${count}]}" ${logpath}/LanError.log
         }
         fi
     }
@@ -243,6 +231,7 @@ count=0
     if [ $(date +%M) == 00 ];
     then
     {
+        drop[${Quantity}]=0
         count=0
         until [ ! ${count} -lt $Quantity ]
         do
@@ -255,9 +244,17 @@ count=0
     }
     else
     {
-        sed -i "`expr $(date +%H) + 2`c$(date +%H) ${drop[*]}" ${logpath}/dropping.log
+        sed -i "`expr $(date +%H) + 2`c$(date +%H)hour ${drop[*]} $(date) $(uptime |tr -d ",:qwertyuiopasdfghjklzxcvbnm"|awk '{print $5}')"  ${logpath}/dropping.log
     }
     fi
+
+    until [ $(uptime |tr -d ",.:qwertyuiopasdfghjklzxcvbnm"|awk '{print $3}') -lt `expr $(grep -c ^processor /proc/cpuinfo) \* 100` ]
+    do
+    {
+        sleep 1s
+        sed -i "`expr $(date +%H) + 2`c$(date +%H)hour ${drop[*]} $(date) $(uptime |tr -d ",:qwertyuiopasdfghjklzxcvbnm"|awk '{print $5}')"  ${logpath}/dropping.log
+    }
+    done
 
     done
 }
