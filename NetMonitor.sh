@@ -15,6 +15,7 @@ do
     {
         sed -i '$d' ${logpath}/Dropping.log
     }
+    fi
 }
 done
 
