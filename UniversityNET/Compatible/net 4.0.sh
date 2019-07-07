@@ -1,9 +1,10 @@
 #!/bin/bash -e
-Eth=()
-Vth=()
-Account=()
-Password=()
+Eth=()#物理网卡
+Vth=()#VLAN
+Account=()#账号
+Password=()#密码
 count=0
+#每行账号密码网卡需要顺序一致
 logpath=/mnt/log
 ###########################################################################################
 #检测设置是否出现错误
@@ -13,10 +14,11 @@ then
     echo "check not pass"
     exit
 }
-else
+elif [ ${#Eth[*]} -eq ${#Vth[*]} ]
+then
 {
     Quantity=${#Account[*]}
-    #创建虚拟网卡||创建drop wan lan school组||创建等待列表
+    #创建虚拟网卡||创建等待列表
     until [ ! ${count} -lt $Quantity ]
     do
     {
@@ -27,6 +29,53 @@ else
     done
 }
 fi
+
+telecom()
+{
+    ping -I ${Vth[${count}]} -c 3 telecom.2333.ink
+    if [ $? -eq 1 ];
+    then
+    {
+        ping -I ${Vth[${count}]} -c 2 202.96.128.166
+        if [ $? -eq 0 ];
+        then
+        {
+            CTP=$(date +%s000)
+            curl --interface ${Vth[${count}]} -s -d "userid=${Account[${count}]}@NFSYSU.GZ&passwd=${Password[${count}]}&wlanuserip=${userip}&wlanacname=nfsysugz2&auth_type=PAP&wlanacIp=183.6.109.10" --user-agent "Supplicant" "http://219.136.125.139/portalAuthAction.do"
+        }
+        else
+        {
+            ifconfig ${Vth[${count}]} down
+            ifconfig ${Vth[${count}]} up
+        }
+        fi
+    }
+    fi
+}
+
+unicom()
+{
+    ping -I ${Vth[${count}]} -c 3 unicom.2333.ink
+    if [ $? -eq 1 ];
+    then
+    {
+        ping -I ${Vth[${count}]} -c 2 172.16.30.33
+        if [ $? -eq 0 ];
+        then
+        {
+            CTP=$(date +%s000)
+            curl --interface ${Vth[${count}]} "http://172.16.30.33/drcom/login?callback=dr${CTP}&DDDDD=${Account[${count}]}&upass=${Password[${count}]}&0MKKey=123456&R1=0&R3=1&R6=0&para=00&v6ip=&_=${CTP}"
+        }
+        else
+        {
+            ifconfig ${Vth[${count}]} down
+            ifconfig ${Vth[${count}]} up
+        }
+        fi
+    }
+    fi
+}
+
 count=0
 {
     while true
@@ -35,85 +84,18 @@ count=0
     if [[ $userip =~ "10.12." ]]
     then
     {
-        #telecom
+        telecom
     }
     elif [[ $userip =~ "10.51." ]];
     then
     {
-        #unicom
-        ping -I ${Vth[${count}]} -c 1 unicom.2333.ink
-        if [ $? -eq 1 ];
-        then
-        {
-            drop[${count}]=`expr ${drop[${count}]} + 1`
-            sed -i "`expr $(date +%H) + 1`c$(date +%H)hour ${drop[*]} $(date) $(uptime |tr -d ",:qwertyuiopasdfghjklzxcvbnm"|awk '{print $5}')"  ${logpath}/Dropping.log
-            ping -I ${Vth[${count}]} -c 2 unicom.2333.ink
-            if [ $? -eq 1 ];
-            then
-            {
-                drop[${count}]=`expr ${drop[${count}]} + 2`
-                sed -i "`expr $(date +%H) + 1`c$(date +%H)hour ${drop[*]} $(date) $(uptime |tr -d ",:qwertyuiopasdfghjklzxcvbnm"|awk '{print $5}')"  ${logpath}/Dropping.log
-                ping -I ${Vth[${count}]} -c 1 210.21.79.129
-                if [ $? -eq 1 ];
-                then
-                {
-                    wan[${count}]=`expr ${wan[${count}]} + 1`
-                    sed -i "`expr $(date +%H) + 1`c$(date +%H)hour ${wan[*]} $(date) $(uptime |tr -d ",:qwertyuiopasdfghjklzxcvbnm"|awk '{print $5}')"  ${logpath}/WanError.log
-                    ping -I ${Vth[${count}]} -c 1 10.10.252.181
-                    if [ $? -eq 1 ];
-                    then
-                    {
-                        school[${count}]=`expr ${school[${count}]} + 1`
-                        sed -i "`expr $(date +%H) + 1`c$(date +%H)hour ${school[*]} $(date) $(uptime |tr -d ",:qwertyuiopasdfghjklzxcvbnm"|awk '{print $5}')"  ${logpath}/SchoolError.log
-                    }
-                    fi
-                    ping -I ${Vth[${count}]} -c 1 172.16.30.33
-                    if [ $? -eq 0 ];
-                    then
-                    {
-                        CTP=$(date +%s000)
-                        curl --interface ${Vth[${count}]} "http://172.16.30.33/drcom/login?callback=dr${CTP}&DDDDD=${Account[${count}]}&upass=${Password[${count}]}&0MKKey=123456&R1=0&R3=1&R6=0&para=00&v6ip=&_=${CTP}"
-                    }
-                    else
-                    {
-                        lan[${count}]=`expr ${lan[${count}]} + 1`
-                        sed -i "`expr $(date +%H) + 1`c$(date +%H)hour ${lan[*]} $(date) $(uptime |tr -d ",:qwertyuiopasdfghjklzxcvbnm"|awk '{print $5}')"  ${logpath}/LanError.log
-                        ifconfig ${Vth[${count}]} down
-                        ifconfig ${Vth[${count}]} up
-                    }
-                    fi
-                }
-                fi
-            }
-            fi
-        }
-        fi
+        unicom
     }
     else
     {
         #dhcp bug
-        lan[${count}]=`expr ${lan[${count}]} + 1`
         ifconfig ${Vth[${count}]} down
         ifconfig ${Vth[${count}]} up
-    }
-    fi
-
-    if [ $(date +%M) == 00 ];
-    then
-    {
-        drop[${Quantity}]=0
-        count=0
-        until [ ! ${count} -lt $Quantity ]
-        do
-        {
-            drop[${count}]=0
-            wan[${count}]=0
-            school[${count}]=0
-            lan[${count}]=0
-            count=`expr ${count} + 1`
-        }
-        done
-        count=0
     }
     fi
 
