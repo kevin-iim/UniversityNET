@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#/bin/bash -e
 Eth=(eth0.3 eth0.3 eth0.3 eth0.4 eth0.5)
 Vth=(vth30 vth31 vth32 vth40 vth50)
 Account=(172011026 172011017 172011006 19924368164 17328347568)

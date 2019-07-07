@@ -32,7 +32,7 @@ fi
 
 telecom()
 {
-    ping -I ${Vth[${count}]} -c 3 telecom.2333.ink
+    ping -I ${Vth[${count}]} -c 3 10000.gd.cn
     if [ $? -eq 1 ];
     then
     {
