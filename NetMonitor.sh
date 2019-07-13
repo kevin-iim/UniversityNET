@@ -76,12 +76,13 @@ var=0
     }
     fi
 
+    load[$(date +%M)]=$(uptime |tr -d ",:qwertyuiopasdfghjklzxcvbnm"|awk '{print $3}')
+    sed -i "`expr $(date +%H) + 1`c$(date +%H)hour ${load[*]} $(date)"  ${logpath}/load.log
+
     until [ $(uptime |tr -d ",.:qwertyuiopasdfghjklzxcvbnm"|awk '{print $3}') -lt `expr $(grep -c ^processor /proc/cpuinfo) \* 100` ]
     do
     {
         sleep 1s
-        load[$(date +%M)]=$(uptime |tr -d ",:qwertyuiopasdfghjklzxcvbnm"|awk '{print $3}')
-        sed -i "`expr $(date +%H) + 1`c$(date +%H)hour ${load[*]} $(date)"  ${logpath}/load.log
     }
     done
 
