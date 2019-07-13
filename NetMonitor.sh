@@ -49,7 +49,6 @@ var=0
     then
     {
         drop[$((10#$(date +%M)))]=`expr ${drop[$((10#$(date +%M)))]} + 1`
-        sed -i "`expr $(date +%H) + 1`c$(date +%H)hour ${drop[*]} $(date)"  ${logpath}/Dropping.log
     }
     fi
 
@@ -76,8 +75,9 @@ var=0
     }
     fi
 
-    load[$((10#$((10#$(date +%M)))))]=$(uptime |tr -d ",:qwertyuiopasdfghjklzxcvbnm"|awk '{print $3}')
-    sed -i "`expr $(date +%H) + 1`c$(date +%H)hour ${load[*]} $(date)"  ${logpath}/load.log
+    load[ $((10#$(date +%M)))]=$(uptime |tr -d ",:qwertyuiopasdfghjklzxcvbnm"|awk '{print $3}')
+    sed -i "`expr $((10#$(date +%H))) + 1`c$((10#$(date +%H)))hour ${load[*]} $(date)"  ${logpath}/load.log
+    sed -i "`expr $((10#$(date +%H))) + 1`c$((10#$(date +%H)))hour ${drop[*]} $(date)"  ${logpath}/Dropping.log
 
     until [ $(uptime |tr -d ",.:qwertyuiopasdfghjklzxcvbnm"|awk '{print $3}') -lt `expr $(grep -c ^processor /proc/cpuinfo) \* 100` ]
     do
