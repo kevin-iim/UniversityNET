@@ -2,8 +2,7 @@ logpath=/mnt/log
 var=0
 
 echo -e "\n" >> ${logpath}/Dropping.log
-echo -e "\n" >> ${logpath}/load.log
-until [ `sed -n '$=' ${logpath}/Dropping.log` -eq 24 -a `sed -n '$=' ${logpath}/load.log` -eq 24 ]
+until [ `sed -n '$=' ${logpath}/Dropping.log` -eq 24 ]
 do
 {
     if [ `sed -n '$=' ${logpath}/Dropping.log` -lt 24 ]
@@ -16,16 +15,6 @@ do
     {
         sed -i '$d' ${logpath}/Dropping.log
     }
-    elif [ `sed -n '$=' ${logpath}/load.log` -lt 24 ]
-    then
-    {
-        echo -e "\n" >> ${logpath}/load.log
-    }
-    elif [ `sed -n '$=' ${logpath}/load.log` -gt 24 ]
-    then
-    {
-        sed -i '$d' ${logpath}/load.log
-    }
     fi
 }
 done
@@ -34,7 +23,6 @@ until [ ! ${var} -lt 60 ]
 do
 {
     drop[${var}]=0
-    load[${var}]=0
     var=`expr ${var} + 1`
 }
 done
@@ -52,7 +40,7 @@ var=0
     }
     fi
 
-    if [ $((10#$(date +%M))) == 00 ];
+    if [ $(date +%M) == 00 ];
     then
     {
         if [ $(var) == 0 ];
@@ -68,18 +56,16 @@ var=0
         }
         fi
     }
-    elif [ $((10#$(date +%M))) == 01 ];
+    elif [ $(date +%M) == 01 ];
     then
     {
         var=0
     }
     fi
 
-    load[ $((10#$(date +%M)))]=$(uptime |tr -d ",:qwertyuiopasdfghjklzxcvbnm"|awk '{print $3}')
-    sed -i "`expr $((10#$(date +%H))) + 1`c$((10#$(date +%H)))hour ${load[*]} $(date)"  ${logpath}/load.log
     sed -i "`expr $((10#$(date +%H))) + 1`c$((10#$(date +%H)))hour ${drop[*]} $(date)"  ${logpath}/Dropping.log
 
-    until [ $(uptime |tr -d ",.:qwertyuiopasdfghjklzxcvbnm"|awk '{print $3}') -lt `expr $(grep -c ^processor /proc/cpuinfo) \* 100` ]
+    until [ $(uptime |tr -d ",.:qwertyuiopasdfghjklzxcvbnm"|awk '{print $5}') -lt `expr $(grep -c ^processor /proc/cpuinfo) \* 100` ]
     do
     {
         sleep 1s
