@@ -107,7 +107,7 @@ count=0
     }
     fi
 
-    until [ $(uptime |tr -d ",.:qwertyuiopasdfghjklzxcvbnm"|awk '{print $3}') -lt `expr $(grep -c ^processor /proc/cpuinfo) \* 100` ]
+    until [ $(uptime |tr -d ",.:qwertyuiopasdfghjklzxcvbnm"|awk '{print $5}') -lt `expr $(grep -c ^processor /proc/cpuinfo) \* 100` ]
     do
     {
         sleep 1s
