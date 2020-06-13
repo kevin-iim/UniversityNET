@@ -8,7 +8,7 @@ count=0
 logpath=/mnt/log
 ###########################################################################################
 #检测设置是否出现错误
-if [ ${#Account[*]} -ne ${#Vth[*]} -o ${#Vth[*]} -ne ${#Account[*]} -o ${#Account[*]} -ne ${#Password[*]} ]
+if [ ${#Account[*]} -ne ${#Vth[*]} -o ${#Vth[*]} -ne ${#Password[*]} -o ${#Account[*]} -ne ${#Password[*]} ]
 then
 {
     echo "check not pass"
